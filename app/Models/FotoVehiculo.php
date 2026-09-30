@@ -4,7 +4,6 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Facades\Storage;
 
 class FotoVehiculo extends Model
 {
@@ -27,6 +26,9 @@ class FotoVehiculo extends Model
 
     public function getUrlAttribute(): string
     {
-        return Storage::disk('public')->url($this->ruta);
+        // Use the current request host/port instead of the APP_URL value.
+        // This keeps images working when the app runs on :8000, a LAN IP, or
+        // behind a domain different from the development URL.
+        return asset('storage/'.ltrim($this->ruta, '/'));
     }
 }

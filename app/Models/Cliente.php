@@ -55,4 +55,28 @@ class Cliente extends Model
     {
         return $this->usuario_id !== null;
     }
+
+    /**
+     * Devuelve el teléfono en formato internacional de Paraguay para wa.me.
+     */
+    public function whatsappTelefono(): ?string
+    {
+        $telefono = preg_replace('/\D+/', '', (string) $this->telefono);
+
+        if (blank($telefono)) {
+            return null;
+        }
+
+        if (str_starts_with($telefono, '00')) {
+            $telefono = substr($telefono, 2);
+        }
+
+        if (str_starts_with($telefono, '595')) {
+            $telefono = '595'.ltrim(substr($telefono, 3), '0');
+        } else {
+            $telefono = '595'.ltrim($telefono, '0');
+        }
+
+        return strlen($telefono) > 3 ? $telefono : null;
+    }
 }

@@ -40,7 +40,7 @@
                 </tr>
             @empty
                 <tr><td class="text-center text-muted py-4">
-                    No hay alertas pendientes. El comando diario las genera a las 07:00.
+                    No hay alertas pendientes. El comando diario las genera a las 08:00.
                 </td></tr>
             @endforelse
             </tbody>

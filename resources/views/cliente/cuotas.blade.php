@@ -2,7 +2,15 @@
 @section('titulo', 'Mis cuotas')
 
 @section('contenido')
-<h1 class="h4 mb-1">Hola, {{ $cliente->nombre }}</h1>
+<div class="d-flex justify-content-between align-items-center gap-3 mb-1">
+    <h1 class="h4 mb-0">Hola, {{ $cliente->nombre }}</h1>
+    <form method="POST" action="{{ route('logout') }}" class="mb-0">
+        @csrf
+        <button type="submit" class="btn btn-outline-secondary btn-sm">
+            <i class="fas fa-sign-out-alt me-1"></i> Cerrar sesión
+        </button>
+    </form>
+</div>
 <p class="text-muted">Este es el estado de tus pagos.</p>
 
 <div class="row mb-4">
@@ -31,14 +39,25 @@
             <tbody>
             @forelse($cuotas as $c)
                 @php($venta = $c->financiamiento->venta)
-                <tr class="{{ $c->fecha_vencimiento->isPast() && ! $c->estaPagada() ? 'table-danger' : '' }}">
+                @php($esVencida = $c->fecha_vencimiento->isPast() && ! $c->estaPagada())
+                @php($esHoy = $c->fecha_vencimiento->toDateString() === now()->toDateString())
+                @php($esManana = $c->fecha_vencimiento->toDateString() === now()->addDay()->toDateString())
+                @php($esPorVencer = ! $c->estaPagada() && ($esHoy || $esManana))
+                <tr class="{{ $esVencida ? 'table-danger' : ($esPorVencer ? 'table-warning' : '') }}">
                     <td>{{ $c->numero_cuota }}/{{ $c->financiamiento->cantidad_cuotas }}</td>
                     <td class="small">{{ $venta->vehiculo->descripcion_corta }}</td>
                     <td>{{ $c->fecha_vencimiento->format('d/m/Y') }}</td>
                     <td class="text-end">{{ $venta->moneda->formatear($c->monto_cuota) }}</td>
                     <td class="text-end">{{ $venta->moneda->formatear($c->monto_pagado) }}</td>
                     <td class="text-end">{{ $c->mora_hoy > 0 ? $venta->moneda->formatear($c->mora_hoy) : '-' }}</td>
-                    <td><span class="badge bg-{{ $c->estado->color() }}">{{ $c->estado->etiqueta() }}</span></td>
+                    <td>
+                        <span class="badge bg-{{ $c->estado->color() }}">{{ $c->estado->etiqueta() }}</span>
+                        @if($esVencida)
+                            <div class="small text-danger mt-1"><i class="fas fa-exclamation-triangle"></i> Vencida</div>
+                        @elseif($esPorVencer)
+                            <div class="small text-warning mt-1"><i class="fas fa-clock"></i> {{ $esHoy ? 'Vence hoy' : 'Vence mañana' }}</div>
+                        @endif
+                    </td>
                 </tr>
             @empty
                 <tr><td colspan="7" class="text-center text-muted py-4">No tenes cuotas registradas.</td></tr>

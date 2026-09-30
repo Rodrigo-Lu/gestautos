@@ -12,7 +12,7 @@ class Alerta extends Model
     protected $table = 'alertas';
 
     protected $fillable = [
-        'tipo', 'mensaje', 'fecha_generacion', 'leida', 'cuota_id', 'usuario_id',
+        'tipo', 'mensaje', 'fecha_generacion', 'avisado_at', 'leida', 'cuota_id', 'usuario_id',
     ];
 
     protected function casts(): array
@@ -21,6 +21,7 @@ class Alerta extends Model
             'tipo'             => TipoAlerta::class,
             'leida'            => 'boolean',
             'fecha_generacion' => 'date',
+            'avisado_at'       => 'datetime',
         ];
     }
 

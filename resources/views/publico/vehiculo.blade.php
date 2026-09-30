@@ -55,6 +55,15 @@
                 <p class="text-muted">{{ $vehiculo->version }} {{ $vehiculo->anio }}</p>
                 <p class="h3 mb-3">{{ $vehiculo->precioFormateado() }}</p>
 
+                @if($vehiculo->whatsappLink())
+                    <a href="{{ config('services.whatsapp.registrar_consulta') ? route('whatsapp.redirect', $vehiculo) : $vehiculo->whatsappLink() }}"
+                       class="btn btn-whatsapp w-100 mb-3"
+                       target="_blank" rel="noopener">
+                        <i class="fa-brands fa-whatsapp me-1" aria-hidden="true"></i>
+                        Consultar por WhatsApp
+                    </a>
+                @endif
+
                 <form method="POST" action="{{ route('simulador') }}" class="border-top pt-3">
                     @csrf
                     <input type="hidden" name="vehiculo_id" value="{{ $vehiculo->id }}">

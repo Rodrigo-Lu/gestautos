@@ -35,4 +35,11 @@ return [
         ],
     ],
 
+    'whatsapp' => [
+        // Formato internacional, sin signo +, espacios ni guiones.
+        'numero' => env('WHATSAPP_NUMERO'),
+        // true: registra la consulta antes de redirigir a wa.me.
+        'registrar_consulta' => env('WHATSAPP_REGISTRAR_CONSULTA', true),
+    ],
+
 ];

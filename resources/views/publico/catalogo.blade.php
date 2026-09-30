@@ -92,7 +92,15 @@
                             <p class="h6 mb-0">{{ $v->precioFormateado() }}</p>
                         </div>
                         <div class="card-footer bg-white border-0">
-                            <a href="{{ route('catalogo.show', $v) }}" class="btn btn-dark btn-sm w-100">Ver detalle</a>
+                            <a href="{{ route('catalogo.show', $v) }}" class="btn btn-dark btn-sm w-100 mb-2">Ver detalle</a>
+                            @if($v->whatsappLink())
+                                <a href="{{ config('services.whatsapp.registrar_consulta') ? route('whatsapp.redirect', $v) : $v->whatsappLink() }}"
+                                   class="btn btn-whatsapp btn-sm w-100"
+                                   target="_blank" rel="noopener">
+                                    <i class="fa-brands fa-whatsapp me-1" aria-hidden="true"></i>
+                                    Consultar por WhatsApp
+                                </a>
+                            @endif
                         </div>
                     </div>
                 </div>

@@ -13,6 +13,7 @@ use App\Http\Controllers\Publico\CatalogoController;
 use App\Http\Controllers\Publico\ConsultaPublicaController;
 use App\Http\Controllers\Publico\SimuladorController;
 use App\Http\Controllers\Publico\TasacionPublicaController;
+use App\Http\Controllers\Publico\WhatsAppController;
 use App\Http\Controllers\ReporteController;
 use App\Http\Controllers\TasacionController;
 use App\Http\Controllers\UsuarioController;
@@ -27,6 +28,9 @@ use Illuminate\Support\Facades\Route;
 */
 Route::get('/', [CatalogoController::class, 'index'])->name('catalogo.index');
 Route::get('/vehiculos/{vehiculo}', [CatalogoController::class, 'show'])->name('catalogo.show');
+Route::get('/vehiculos/{vehiculo}/whatsapp', [WhatsAppController::class, 'redirect'])
+    ->middleware('throttle:30,1')
+    ->name('whatsapp.redirect');
 Route::match(['get', 'post'], '/simulador', SimuladorController::class)->name('simulador');
 Route::post('/consultas', [ConsultaPublicaController::class, 'store'])
     ->middleware('throttle:10,1')
@@ -92,6 +96,9 @@ Route::middleware(['auth', 'rol:PROPIETARIO,ADMINISTRADOR,EMPLEADO'])
         Route::get('cuotas', [CuotaController::class, 'index'])->name('cuotas.index');
         Route::get('cuotas/{cuota}/cobrar', [CuotaController::class, 'cobrar'])->name('cuotas.cobrar');
         Route::post('cuotas/{cuota}/cobrar', [CuotaController::class, 'registrarPago'])->name('cuotas.pagar');
+        Route::get('cuotas/{cuota}/whatsapp', [CuotaController::class, 'avisarWhatsApp'])
+            ->middleware('throttle:30,1')
+            ->name('cuotas.whatsapp');
 
         // Alertas
         Route::get('alertas', [AlertaController::class, 'index'])->name('alertas.index');

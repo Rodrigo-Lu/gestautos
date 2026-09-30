@@ -114,6 +114,31 @@ class Vehiculo extends Model
         return $this->moneda->formatear($this->precio);
     }
 
+    /**
+     * URL directa para iniciar una conversación de WhatsApp sobre este vehículo.
+     * Devuelve null cuando el vehículo no está disponible o no hay número configurado.
+     */
+    public function whatsappLink(): ?string
+    {
+        if (! $this->activo || $this->estado !== EstadoVehiculo::DISPONIBLE) {
+            return null;
+        }
+
+        $numero = preg_replace('/\D+/', '', (string) config('services.whatsapp.numero'));
+
+        if (! $numero) {
+            return null;
+        }
+
+        $urlFicha = route('catalogo.show', $this);
+        $codigo = $this->codigo_publicacion ?: $this->id;
+        $mensaje = "Hola, me interesa el {$this->marca} {$this->modelo} {$this->anio} "
+            . "(código {$codigo}), precio {$this->precioFormateado()}. "
+            . "¿Sigue disponible? {$urlFicha}";
+
+        return "https://wa.me/{$numero}?text=".urlencode($mensaje);
+    }
+
     public function puedeVenderse(): bool
     {
         return $this->activo && $this->estado !== EstadoVehiculo::VENDIDO;

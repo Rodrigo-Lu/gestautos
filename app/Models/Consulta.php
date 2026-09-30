@@ -13,7 +13,7 @@ class Consulta extends Model
 
     protected $fillable = [
         'nombre', 'telefono', 'email', 'mensaje', 'fecha', 'fecha_contacto',
-        'estado', 'vehiculo_id', 'cliente_id', 'usuario_id',
+        'estado', 'origen', 'vehiculo_id', 'cliente_id', 'usuario_id',
     ];
 
     protected function casts(): array

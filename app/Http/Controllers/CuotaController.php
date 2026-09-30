@@ -3,8 +3,10 @@
 namespace App\Http\Controllers;
 
 use App\Enums\EstadoCuota;
+use App\Enums\TipoAlerta;
 use App\Enums\TipoPago;
 use App\Http\Requests\CobroRequest;
+use App\Models\Alerta;
 use App\Models\Cuota;
 use App\Services\CobranzaService;
 use App\Services\FinanciamientoService;
@@ -16,10 +18,13 @@ class CuotaController extends Controller
     {
         $this->authorize('viewAny', \App\Models\Venta::class);
 
-        $cuotas = Cuota::with('financiamiento.venta.cliente', 'financiamiento.venta.vehiculo')
+        $vista = $request->input('vista');
+
+        $cuotas = Cuota::with('financiamiento.venta.cliente', 'financiamiento.venta.vehiculo', 'alertas')
             ->when($request->filled('estado'), fn ($q) => $q->where('estado', $request->input('estado')))
-            ->when($request->input('vista') === 'vencidas', fn ($q) => $q->vencidas())
-            ->when($request->input('vista') === 'por_vencer', fn ($q) => $q->porVencer())
+            ->when($vista === 'vencidas', fn ($q) => $q->vencidas())
+            ->when($vista === 'por_vencer', fn ($q) => $q->porVencer())
+            ->when($vista === 'avisar_hoy', fn ($q) => $q->paraAvisarHoy())
             ->when($request->filled('q'), function ($q) use ($request) {
                 $t = '%'.$request->input('q').'%';
                 $q->whereHas('financiamiento.venta.cliente', function ($c) use ($t) {
@@ -38,6 +43,40 @@ class CuotaController extends Controller
             'filtros' => $request->only(['estado', 'vista', 'q']),
             'estados' => EstadoCuota::opciones(),
         ]);
+    }
+
+    public function avisarWhatsApp(Request $request, Cuota $cuota, FinanciamientoService $financiamiento)
+    {
+        $cuota->load('financiamiento.venta.cliente', 'financiamiento.venta.vehiculo', 'alertas');
+        $this->authorize('cobrar', $cuota->financiamiento->venta);
+
+        if ($cuota->estaPagada()) {
+            abort(404);
+        }
+
+        $mora = $financiamiento->calcularMora($cuota);
+        $enlace = $cuota->whatsappLink($mora);
+
+        if (! $enlace) {
+            return back()->with('error', 'El cliente no tiene un teléfono válido para WhatsApp.');
+        }
+
+        $tipo = $cuota->tipoAlertaAviso() ?? TipoAlerta::POR_VENCER;
+        $alerta = $cuota->alertas()->firstOrCreate(
+            ['tipo' => $tipo->value],
+            [
+                'mensaje'          => $cuota->whatsappMessage($mora),
+                'fecha_generacion' => now()->toDateString(),
+                'leida'            => false,
+            ]
+        );
+
+        $alerta->update([
+            'avisado_at' => now(),
+            'usuario_id' => $request->user()->id,
+        ]);
+
+        return redirect()->away($enlace);
     }
 
     public function cobrar(Cuota $cuota, FinanciamientoService $financiamiento)

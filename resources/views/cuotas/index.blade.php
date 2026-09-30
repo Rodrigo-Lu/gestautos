@@ -11,6 +11,8 @@
                class="btn btn-sm btn-{{ ($filtros['vista'] ?? '') === 'vencidas' ? 'danger' : 'outline-danger' }}">Vencidas</a>
             <a href="{{ route('cuotas.index', ['vista' => 'por_vencer']) }}"
                class="btn btn-sm btn-{{ ($filtros['vista'] ?? '') === 'por_vencer' ? 'warning' : 'outline-warning' }}">Por vencer</a>
+            <a href="{{ route('cuotas.index', ['vista' => 'avisar_hoy']) }}"
+               class="btn btn-sm btn-{{ ($filtros['vista'] ?? '') === 'avisar_hoy' ? 'success' : 'outline-success' }}">Avisar hoy</a>
         </div>
 
         <form method="GET" class="form-inline filtro-responsive">
@@ -34,11 +36,12 @@
             <thead>
                 <tr><th>Vence</th><th>Cliente</th><th>Vehículo</th><th>Cuota</th>
                     <th class="text-right">Importe</th><th class="text-right">Saldo</th>
-                    <th class="text-right">Mora hoy</th><th>Estado</th><th></th></tr>
+                    <th class="text-right">Mora hoy</th><th>Estado</th><th>Acción</th></tr>
             </thead>
             <tbody>
             @forelse($cuotas as $c)
                 @php($venta = $c->financiamiento->venta)
+                @php($alertaAviso = $c->alertaAviso())
                 <tr class="{{ $c->fecha_vencimiento->isPast() && ! $c->estaPagada() ? 'table-danger' : '' }}">
                     <td>{{ $c->fecha_vencimiento->format('d/m/Y') }}</td>
                     <td><a href="{{ route('clientes.show', $venta->cliente) }}">{{ $venta->cliente->nombre }}</a></td>
@@ -52,7 +55,23 @@
                     <td><span class="badge badge-{{ $c->estado->color() }}">{{ $c->estado->etiqueta() }}</span></td>
                     <td class="text-right">
                         @if(! $c->estaPagada())
+                            @if($venta->cliente->whatsappTelefono())
+                                <a href="{{ route('cuotas.whatsapp', $c) }}"
+                                   class="btn btn-xs btn-success"
+                                   target="_blank" rel="noopener">
+                                    <i class="fab fa-whatsapp"></i> WhatsApp
+                                </a>
+                            @else
+                                <button type="button" class="btn btn-xs btn-secondary" disabled title="El cliente no tiene teléfono">
+                                    Sin teléfono
+                                </button>
+                            @endif
                             <a href="{{ route('cuotas.cobrar', $c) }}" class="btn btn-xs btn-primary">Cobrar</a>
+                        @endif
+                        @if($alertaAviso?->avisado_at)
+                            <div class="small text-success mt-1">
+                                Avisado {{ $alertaAviso->avisado_at->format('d/m H:i') }}
+                            </div>
                         @endif
                     </td>
                 </tr>

@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\EstadoCuota;
+use App\Enums\TipoAlerta;
 use App\Enums\TipoPago;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -78,6 +79,33 @@ class Cuota extends Model
         ]);
     }
 
+    public function scopeParaAvisarHoy(Builder $q): Builder
+    {
+        $hoy = now()->toDateString();
+        $manana = now()->addDay()->toDateString();
+
+        return $q
+            ->whereIn('estado', [
+                EstadoCuota::PENDIENTE->value,
+                EstadoCuota::PARCIAL->value,
+            ])
+            ->where(function (Builder $q) use ($hoy, $manana) {
+                $q->where(function (Builder $q) use ($hoy) {
+                    $q->whereDate('fecha_vencimiento', $hoy)
+                        ->whereDoesntHave('alertas', function (Builder $a) {
+                            $a->where('tipo', TipoAlerta::VENCE_HOY->value)
+                                ->whereNotNull('avisado_at');
+                        });
+                })->orWhere(function (Builder $q) use ($manana) {
+                    $q->whereDate('fecha_vencimiento', $manana)
+                        ->whereDoesntHave('alertas', function (Builder $a) {
+                            $a->where('tipo', TipoAlerta::POR_VENCER->value)
+                                ->whereNotNull('avisado_at');
+                        });
+                });
+            });
+    }
+
     public function scopeDelCliente(Builder $q, int $clienteId): Builder
     {
         return $q->whereHas('financiamiento.venta', fn (Builder $v) => $v->where('cliente_id', $clienteId));
@@ -100,6 +128,70 @@ class Cuota extends Model
     public function estaPagada(): bool
     {
         return $this->estado === EstadoCuota::PAGADA;
+    }
+
+    public function tipoAlertaAviso(): ?TipoAlerta
+    {
+        $hoy = now()->toDateString();
+        $fecha = $this->fecha_vencimiento->toDateString();
+
+        return match (true) {
+            $this->estado === EstadoCuota::VENCIDA => TipoAlerta::VENCIDA,
+            $fecha === $hoy => TipoAlerta::VENCE_HOY,
+            $this->fecha_vencimiento->isPast() => TipoAlerta::VENCIDA,
+            default => TipoAlerta::POR_VENCER,
+        };
+    }
+
+    public function alertaAviso(): ?Alerta
+    {
+        $tipo = $this->tipoAlertaAviso();
+
+        if ($this->relationLoaded('alertas')) {
+            return $this->alertas->first(
+                fn (Alerta $alerta) => $alerta->tipo === $tipo
+            );
+        }
+
+        return $this->alertas()->where('tipo', $tipo->value)->first();
+    }
+
+    public function whatsappMessage(?float $mora = null): string
+    {
+        $venta = $this->financiamiento->venta;
+        $cliente = $venta->cliente;
+        $vehiculo = $venta->vehiculo->descripcion_corta;
+        $nombre = $cliente->nombre;
+        $cuota = "{$this->numero_cuota}/{$this->financiamiento->cantidad_cuotas}";
+        $saldo = number_format($this->saldo, 0, ',', '.');
+        $fecha = $this->fecha_vencimiento->format('d/m/Y');
+        $tipo = $this->tipoAlertaAviso();
+
+        if ($tipo === TipoAlerta::VENCE_HOY) {
+            return "Hola {$nombre}, le recordamos que hoy vence la cuota {$cuota} de su {$vehiculo}. Saldo: Gs. {$saldo}. Gracias. — JP Automotores";
+        }
+
+        if ($tipo === TipoAlerta::VENCIDA) {
+            return 'Hola '.$nombre.", su cuota {$cuota} de su {$vehiculo} venció el {$fecha}. Saldo: Gs. {$saldo} + mora Gs. ".number_format($mora ?? (float) $this->monto_mora, 0, ',', '.').'. Por favor comuníquese con nosotros. — JP Automotores';
+        }
+
+        $momento = $this->fecha_vencimiento->toDateString() === now()->addDay()->toDateString()
+            ? 'mañana'
+            : "el {$fecha}";
+
+        return "Hola {$nombre}, le recordamos que {$momento} vence la cuota {$cuota} de su {$vehiculo}. Saldo: Gs. {$saldo}. Gracias. — JP Automotores";
+    }
+
+    public function whatsappLink(?float $mora = null): ?string
+    {
+        $cliente = $this->financiamiento?->venta?->cliente;
+        $telefono = $cliente?->whatsappTelefono();
+
+        if ($this->estaPagada() || ! $telefono) {
+            return null;
+        }
+
+        return 'https://wa.me/'.$telefono.'?text='.urlencode($this->whatsappMessage($mora));
     }
 
     public function getTotalAPagarAttribute(): float
