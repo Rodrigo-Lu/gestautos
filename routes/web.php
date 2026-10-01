@@ -71,9 +71,6 @@ Route::middleware(['auth', 'rol:CLIENTE'])->prefix('mi-cuenta')->group(function 
 Route::middleware(['auth', 'rol:PROPIETARIO,ADMINISTRADOR,EMPLEADO'])
     ->prefix('panel')
     ->group(function () {
-
-        Route::get('/', DashboardController::class)->name('dashboard');
-
         // Vehiculos
         Route::resource('vehiculos', VehiculoController::class);
         Route::post('vehiculos/{vehiculo}/fotos/{foto}/principal', [FotoVehiculoController::class, 'principal'])
@@ -128,5 +125,6 @@ Route::middleware(['auth', 'rol:PROPIETARIO,ADMINISTRADOR,EMPLEADO'])
 Route::middleware(['auth', 'rol:PROPIETARIO,ADMINISTRADOR'])
     ->prefix('panel')
     ->group(function () {
+        Route::get('/', DashboardController::class)->name('dashboard');
         Route::resource('usuarios', UsuarioController::class)->except(['show', 'destroy']);
     });

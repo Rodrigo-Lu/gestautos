@@ -39,6 +39,12 @@ class LoginController extends Controller
 
         $request->session()->regenerate();
 
+        // El empleado no puede volver a /panel: esa URL es exclusivamente el dashboard.
+        // Esto también evita que una URL intended previa fuerce un 403 después del login.
+        if (Auth::user()->rol === Rol::EMPLEADO) {
+            return redirect()->route('vehiculos.index');
+        }
+
         return redirect()->intended($this->destinoSegunRol());
     }
 
@@ -53,8 +59,10 @@ class LoginController extends Controller
 
     private function destinoSegunRol(): string
     {
-        return Auth::user()->rol === Rol::CLIENTE
-            ? route('cliente.cuotas')
-            : route('dashboard');
+        return match (Auth::user()->rol) {
+            Rol::CLIENTE   => route('cliente.cuotas'),
+            Rol::EMPLEADO  => route('vehiculos.index'),
+            default        => route('dashboard'),
+        };
     }
 }

@@ -1,6 +1,6 @@
 @php($u = auth()->user())
 <aside class="main-sidebar sidebar-dark-primary elevation-4">
-    <a href="{{ route('dashboard') }}" class="brand-link text-center">
+    <a href="{{ $u->esAdministrativo() ? route('dashboard') : route('vehiculos.index') }}" class="brand-link text-center">
         <span class="brand-text font-weight-light">GestAutos</span>
     </a>
 
@@ -8,11 +8,13 @@
         <nav class="mt-2">
             <ul class="nav nav-pills nav-sidebar flex-column" data-widget="treeview" role="menu">
 
-                <li class="nav-item">
-                    <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
-                        <i class="nav-icon fas fa-chart-line"></i><p>Inicio</p>
-                    </a>
-                </li>
+                @if($u->esAdministrativo())
+                    <li class="nav-item">
+                        <a href="{{ route('dashboard') }}" class="nav-link {{ request()->routeIs('dashboard') ? 'active' : '' }}">
+                            <i class="nav-icon fas fa-chart-line"></i><p>Inicio</p>
+                        </a>
+                    </li>
+                @endif
 
                 <li class="nav-header">OPERACIÓN</li>
 
